@@ -9,10 +9,11 @@ import {
 } from "@react-three/drei";
 import CanvasLoader from "../Loader";
 
-const Computers = ({ screenSize }) => {
+// Optimize Computers component using screenSize and memoization to avoid unnecessary re-renders
+const Computers = React.memo(({ screenSize }) => {
   const computer = useGLTF("./desktop_pc/scene.gltf");
 
-  // Adjust scale and position based on screen size
+  // Define model properties (scale, position, and rotation) for different screen sizes
   const modelProps = {
     large: { scale: 0.75, position: [0, -3.25, -1.5], rotation: [-0.01, -0.2, -0.1] },
     tablet: { scale: 0.7, position: [0, -3, -2], rotation: [-0.01, -0.2, -0.1] },
@@ -23,50 +24,44 @@ const Computers = ({ screenSize }) => {
 
   return (
     <mesh>
-      {/* Hemisphere Light */}
-      <hemisphereLight intensity={0.2} groundColor="#2C2C2C" skyColor="#1A1A1A" />
+      {/* Hemisphere Light for ambient lighting */}
+      <hemisphereLight intensity={0.15} groundColor="#2C2C2C" skyColor="#1A1A1A" />
 
-      {/* Directional Light */}
+      {/* Directional Light - slightly reduced intensity for mobile */}
       <directionalLight
         position={[10, 10, 10]}
-        intensity={1.2}
+        intensity={screenSize === "mobile" ? 1.0 : 1.2}
         castShadow
         shadow-mapSize={1024}
         shadow-bias={-0.0001}
       />
 
-      {/* Spotlight */}
+      {/* Spotlight with optimized intensity */}
       <spotLight
         position={[-20, 50, 10]}
         angle={0.3}
         penumbra={0.9}
-        intensity={1.5}
+        intensity={screenSize === "mobile" ? 1.2 : 1.5}
         castShadow
         shadow-mapSize={1024}
       />
 
-      {/* Point Light */}
-      <pointLight position={[0, 10, 0]} intensity={1} />
-
-      {/* 3D Model */}
+      {/* 3D Model with adjusted scale and position */}
       <primitive
         object={computer.scene}
         scale={currentProps.scale}
         position={currentProps.position}
         rotation={currentProps.rotation}
       />
-
-      {/* Material enhancements */}
-      <meshStandardMaterial metalness={0.6} roughness={0.4} />
     </mesh>
   );
-};
+});
 
 const ComputersCanvas = () => {
   const [screenSize, setScreenSize] = useState("large");
 
   useEffect(() => {
-    // Define breakpoints for screen sizes
+    // Define breakpoints and update screen size dynamically
     const updateScreenSize = () => {
       const width = window.innerWidth;
 
@@ -79,18 +74,19 @@ const ComputersCanvas = () => {
       }
     };
 
-    // Call function initially to set the correct screen size
+    // Initial screen size detection
     updateScreenSize();
 
-    // Add a listener for window resizing
+    // Listen to window resize events
     window.addEventListener("resize", updateScreenSize);
 
-    // Clean up listener on component unmount
+    // Clean up event listener
     return () => {
       window.removeEventListener("resize", updateScreenSize);
     };
   }, []);
 
+  // Define camera properties for different screen sizes
   const cameraProps = {
     large: { position: [20, 3, 5], fov: 25 },
     tablet: { position: [15, 3, 5], fov: 30 },
@@ -101,9 +97,9 @@ const ComputersCanvas = () => {
 
   return (
     <Canvas
-      frameloop="demand"
+      frameloop="demand" // Avoid unnecessary re-renders
       shadows
-      dpr={[1, 2]}
+      dpr={[1, screenSize === "mobile" ? 1.5 : 2]} // Lower pixel ratio for mobile to boost performance
       camera={currentCameraProps}
       gl={{ preserveDrawingBuffer: true }}
     >
@@ -115,13 +111,13 @@ const ComputersCanvas = () => {
           minPolarAngle={Math.PI / 2}
         />
 
-        {/* 3D Model */}
+        {/* Render the 3D Model */}
         <Computers screenSize={screenSize} />
 
-        {/* Environment */}
+        {/* Environment Lighting for realistic reflections */}
         <Environment background={false} preset="sunset" />
 
-        {/* Soft Shadows */}
+        {/* Soft shadows for depth effect */}
         <ContactShadows
           position={[0, -3.25, 0]}
           opacity={0.7}
@@ -131,6 +127,7 @@ const ComputersCanvas = () => {
         />
       </Suspense>
 
+      {/* Preload all assets for smoother transitions */}
       <Preload all />
     </Canvas>
   );
