@@ -7,23 +7,26 @@ import {
   Environment,
   ContactShadows,
 } from "@react-three/drei";
-import * as THREE from "three";
-
 import CanvasLoader from "../Loader";
 
-const Computers = ({ isMobile }) => {
+const Computers = ({ screenSize }) => {
   const computer = useGLTF("./desktop_pc/scene.gltf");
+
+  // Adjust scale and position based on screen size
+  const modelProps = {
+    large: { scale: 0.75, position: [0, -3.25, -1.5], rotation: [-0.01, -0.2, -0.1] },
+    tablet: { scale: 0.7, position: [0, -3, -2], rotation: [-0.01, -0.2, -0.1] },
+    mobile: { scale: 0.6, position: [0, -2.5, -2.5], rotation: [-0.01, -0.2, -0.1] },
+  };
+
+  const currentProps = modelProps[screenSize] || modelProps.large;
 
   return (
     <mesh>
-      {/* Hemisphere Light with reduced intensity */}
-      <hemisphereLight
-        intensity={0.2} // Keep intensity low for a darker scene
-        groundColor="#2C2C2C" // Dark gray for a subtler ground reflection
-        skyColor="#1A1A1A" // Near-black to darken the sky reflection
-      />
+      {/* Hemisphere Light */}
+      <hemisphereLight intensity={0.2} groundColor="#2C2C2C" skyColor="#1A1A1A" />
 
-      {/* Directional Light for sharper shadows, toned down */}
+      {/* Directional Light */}
       <directionalLight
         position={[10, 10, 10]}
         intensity={1.2}
@@ -32,7 +35,7 @@ const Computers = ({ isMobile }) => {
         shadow-bias={-0.0001}
       />
 
-      {/* Spotlight with softer glow and lower intensity */}
+      {/* Spotlight */}
       <spotLight
         position={[-20, 50, 10]}
         angle={0.3}
@@ -42,56 +45,66 @@ const Computers = ({ isMobile }) => {
         shadow-mapSize={1024}
       />
 
-      {/* Point light for subtle fill */}
+      {/* Point Light */}
       <pointLight position={[0, 10, 0]} intensity={1} />
 
-      {/* The 3D Model with updated material for realism */}
+      {/* 3D Model */}
       <primitive
         object={computer.scene}
-        scale={isMobile ? 0.7 : 0.75}
-        position={isMobile ? [0, -3, -2.2] : [0, -3.25, -1.5]}
-        rotation={[-0.01, -0.2, -0.1]}
+        scale={currentProps.scale}
+        position={currentProps.position}
+        rotation={currentProps.rotation}
       />
 
-      {/* Enhance material to make it more realistic */}
-      <meshStandardMaterial
-        metalness={0.6} // Introduce a subtle metallic look
-        roughness={0.4} // Control the surface roughness for realism
-      />
+      {/* Material enhancements */}
+      <meshStandardMaterial metalness={0.6} roughness={0.4} />
     </mesh>
   );
 };
 
 const ComputersCanvas = () => {
-  const [isMobile, setIsMobile] = useState(false);
+  const [screenSize, setScreenSize] = useState("large");
 
   useEffect(() => {
-    // Add a listener for changes to the screen size
-    const mediaQuery = window.matchMedia("(max-width: 500px)");
+    // Define breakpoints for screen sizes
+    const updateScreenSize = () => {
+      const width = window.innerWidth;
 
-    // Set the initial value of the `isMobile` state variable
-    setIsMobile(mediaQuery.matches);
-
-    // Define a callback function to handle changes to the media query
-    const handleMediaQueryChange = (event) => {
-      setIsMobile(event.matches);
+      if (width <= 500) {
+        setScreenSize("mobile");
+      } else if (width <= 900) {
+        setScreenSize("tablet");
+      } else {
+        setScreenSize("large");
+      }
     };
 
-    // Add the callback function as a listener for changes to the media query
-    mediaQuery.addEventListener("change", handleMediaQueryChange);
+    // Call function initially to set the correct screen size
+    updateScreenSize();
 
-    // Remove the listener when the component is unmounted
+    // Add a listener for window resizing
+    window.addEventListener("resize", updateScreenSize);
+
+    // Clean up listener on component unmount
     return () => {
-      mediaQuery.removeEventListener("change", handleMediaQueryChange);
+      window.removeEventListener("resize", updateScreenSize);
     };
   }, []);
+
+  const cameraProps = {
+    large: { position: [20, 3, 5], fov: 25 },
+    tablet: { position: [15, 3, 5], fov: 30 },
+    mobile: { position: [10, 2, 4], fov: 35 },
+  };
+
+  const currentCameraProps = cameraProps[screenSize] || cameraProps.large;
 
   return (
     <Canvas
       frameloop="demand"
       shadows
       dpr={[1, 2]}
-      camera={{ position: [20, 3, 5], fov: 25 }}
+      camera={currentCameraProps}
       gl={{ preserveDrawingBuffer: true }}
     >
       <Suspense fallback={<CanvasLoader />}>
@@ -103,12 +116,12 @@ const ComputersCanvas = () => {
         />
 
         {/* 3D Model */}
-        <Computers isMobile={isMobile} />
+        <Computers screenSize={screenSize} />
 
-        {/* Add Environment for reflections */}
+        {/* Environment */}
         <Environment background={false} preset="sunset" />
 
-        {/* Soft shadows below the object */}
+        {/* Soft Shadows */}
         <ContactShadows
           position={[0, -3.25, 0]}
           opacity={0.7}
@@ -124,3 +137,4 @@ const ComputersCanvas = () => {
 };
 
 export default ComputersCanvas;
+
