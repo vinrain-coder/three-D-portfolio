@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import { memo } from "react";
 import { Tilt } from "react-tilt";
 import { motion, useReducedMotion } from "framer-motion";
 import { styles } from "../styles";
