@@ -1,8 +1,9 @@
-import React, { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState, useCallback } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Preload, useGLTF } from "@react-three/drei";
 import CanvasLoader from "../Loader";
 
+// Optimized Earth component using memoization
 const Earth = React.memo(() => {
   const earth = useGLTF("./planet/scene.gltf");
 
@@ -18,28 +19,36 @@ const Earth = React.memo(() => {
 
 const EarthCanvas = () => {
   const [screenSize, setScreenSize] = useState("large");
+  let resizeTimeout = null; // For throttling resize events
+
+  // Update screen size with requestAnimationFrame for better performance
+  const updateScreenSize = useCallback(() => {
+    const width = window.innerWidth;
+    const newSize = width <= 500 ? "mobile" : width <= 900 ? "tablet" : "large";
+
+    // Only set state if the size has changed
+    if (newSize !== screenSize) {
+      setScreenSize(newSize);
+    }
+  }, [screenSize]);
 
   useEffect(() => {
-    // Update screen size on resize
     const handleResize = () => {
-      const width = window.innerWidth;
-
-      if (width <= 500) {
-        setScreenSize("mobile");
-      } else if (width <= 900) {
-        setScreenSize("tablet");
-      } else {
-        setScreenSize("large");
+      if (!resizeTimeout) {
+        resizeTimeout = requestAnimationFrame(() => {
+          updateScreenSize();
+          resizeTimeout = null;
+        });
       }
     };
 
-    handleResize();
     window.addEventListener("resize", handleResize);
+    updateScreenSize(); // Initial detection
 
     return () => {
       window.removeEventListener("resize", handleResize);
     };
-  }, []);
+  }, [updateScreenSize]);
 
   // Set camera and DPR based on screen size
   const cameraProps = {
@@ -80,3 +89,4 @@ const EarthCanvas = () => {
 };
 
 export default EarthCanvas;
+
